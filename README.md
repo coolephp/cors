@@ -23,6 +23,29 @@ $ composer require coolephp/cors -vvv
 
 ## Usage
 
+1. Copy `cors/config/cors.php` to `coole-skeleton/config/cors.php`.
+2. Config `\Coole\Cors\Cors::class` middleware.
+
+``` php
+<?php
+
+return [
+    /*
+     * App 名称
+     */
+    'name' => env('APP_NAME', 'Coole'),
+
+    /*
+     * 全局中间件
+     */
+    'middleware' => [
+        ...
+        \Coole\Cors\Cors::class
+        ...
+    ],
+];
+```
+
 ## Testing
 
 ``` bash
