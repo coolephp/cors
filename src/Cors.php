@@ -17,18 +17,19 @@ use Guanguans\Coole\Middleware\MiddlewareInterface;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Tightenco\Collect\Support\Collection;
 
 class Cors implements MiddlewareInterface
 {
     /**
-     * @var \Asm89\Stack\CorsService
-     */
-    protected $cors;
-
-    /**
      * @var \Tightenco\Collect\Support\Collection
      */
     protected $config;
+
+    /**
+     * @var \Asm89\Stack\CorsService
+     */
+    protected $corsService;
 
     /**
      * {@inheritdoc}
@@ -37,20 +38,20 @@ class Cors implements MiddlewareInterface
     {
         $this->initConfig();
         $this->config = app('config')['cors'];
-        $this->cors = new CorsService($this->corsOptions());
+        $this->corsService = $this->buildCorsService($this->config);
     }
 
     public function initConfig()
     {
-        $config = require __DIR__.'/../config/cors.php';
+        $initConfig = require __DIR__.'/../config/cors.php';
 
-        App::addConfig(['cors' => $config]);
+        App::addConfig(['cors' => $initConfig]);
     }
 
     /**
      * @param \Symfony\Component\HttpFoundation\Request $request
      *
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return mixed|\Symfony\Component\HttpFoundation\Response
      */
     public function handle($request, Closure $next)
     {
@@ -59,10 +60,10 @@ class Cors implements MiddlewareInterface
         }
 
         // For Preflight, return the Preflight response
-        if ($this->cors->isPreflightRequest($request)) {
-            $response = $this->cors->handlePreflightRequest($request);
+        if ($this->corsService->isPreflightRequest($request)) {
+            $response = $this->corsService->handlePreflightRequest($request);
 
-            $this->cors->varyHeader($response, 'Access-Control-Request-Method');
+            $this->corsService->varyHeader($response, 'Access-Control-Request-Method');
 
             return $response;
         }
@@ -70,7 +71,7 @@ class Cors implements MiddlewareInterface
         $response = $next($request);
 
         if ('OPTIONS' === $request->getMethod()) {
-            $this->cors->varyHeader($response, 'Access-Control-Request-Method');
+            $this->corsService->varyHeader($response, 'Access-Control-Request-Method');
         }
 
         return $this->addHeaders($request, $response);
@@ -79,7 +80,7 @@ class Cors implements MiddlewareInterface
     protected function addHeaders(Request $request, Response $response): Response
     {
         if (! $response->headers->has('Access-Control-Allow-Origin')) {
-            $response = $this->cors->addActualRequestHeaders($response, $request);
+            $response = $this->corsService->addActualRequestHeaders($response, $request);
         }
 
         return $response;
@@ -123,12 +124,8 @@ class Cors implements MiddlewareInterface
         });
     }
 
-    /**
-     * @return array
-     */
-    protected function corsOptions()
+    protected function buildCorsService(Collection $config): CorsService
     {
-        $config = $this->config;
         if ($config['exposed_headers'] && ! is_array($config['exposed_headers'])) {
             throw new \RuntimeException('CORS config `exposed_headers` should be `false` or an array');
         }
@@ -157,7 +154,7 @@ class Cors implements MiddlewareInterface
             }
         }
 
-        return $options;
+        return new CorsService($options);
     }
 
     /**
