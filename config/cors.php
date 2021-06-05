@@ -16,8 +16,8 @@ return [
     'paths' => [],
 
     /*
-    * Matches the request method. `['*']` allows all methods.
-    */
+     * Matches the request method. `['*']` allows all methods.
+     */
     'allowed_methods' => ['*'],
 
     /*
